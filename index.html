@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Snake - 10 Modes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00ffcc;
+            --secondary-color: #ff00ff;
+            --food-color: #ffff00;
+            --bg-color: #0d0d1a;
+            --text-color: #f0f0f0;
+            --glow-strong: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color), 0 0 15px var(--primary-color);
+            --glow-medium: 0 0 3px var(--secondary-color), 0 0 6px var(--secondary-color);
+            --glow-food: 0 0 5px var(--food-color), 0 0 10px var(--food-color);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scrollbar-color: var(--secondary-color) var(--bg-color);
+            scrollbar-width: thin;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            text-align: center;
+        }
+
+        #game-container {
+            border: 3px solid var(--primary-color);
+            border-radius: 15px;
+            box-shadow: var(--glow-strong);
+            padding: 20px;
+            background: rgba(13, 13, 26, 0.8);
+            backdrop-filter: blur(5px);
+            position: relative;
+            width: 95vw;
+            max-width: 640px;
+            max-height: 95vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease-in-out;
+            width: 100%;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        #main-menu h1 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            color: var(--primary-color);
+            text-shadow: var(--glow-strong);
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        #mode-list {
+            list-style: none;
+            padding: 0;
+            width: 100%;
+            overflow-y: auto;
+            max-height: 60vh;
+            padding-right: 15px;
+            margin-right: -15px;
+        }
+
+        #mode-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #mode-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #mode-list::-webkit-scrollbar-thumb {
+            background-color: var(--secondary-color);
+            border-radius: 20px;
+            border: 2px solid var(--bg-color);
+            box-shadow: var(--glow-medium);
+        }
+
+        #mode-list li {
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            padding: 15px 10px;
+            margin: 10px 0;
+            border: 2px solid var(--secondary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: var(--glow-medium);
+        }
+
+        #mode-list li:hover {
+            background-color: var(--secondary-color);
+            color: var(--bg-color);
+            transform: scale(1.05);
+            box-shadow: 0 0 8px var(--secondary-color), 0 0 15px var(--secondary-color);
+        }
+        
+        #mode-list li span {
+            font-size: clamp(0.6rem, 2vw, 0.7rem);
+            display: block;
+            margin-top: 8px;
+            color: var(--primary-color);
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        
+        #mode-list li:hover span {
+             color: var(--bg-color);
+        }
+
+        .creator-credit {
+            margin-top: 20px;
+            font-size: 0.7rem;
+            color: var(--secondary-color);
+            flex-shrink: 0;
+        }
+        .creator-credit a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: text-shadow 0.2s ease-in-out;
+        }
+        .creator-credit a:hover {
+            text-shadow: var(--glow-strong);
+        }
+
+        #game-screen {
+             flex-direction: column;
+        }
+
+        #stats-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: clamp(0.7rem, 2.5vw, 1rem);
+            color: var(--primary-color);
+            flex-wrap: wrap;
+        }
+
+        #stats-bar #mode-display {
+            color: var(--secondary-color);
+        }
+
+        canvas {
+            background-color: #000;
+            border: 2px solid var(--secondary-color);
+            box-shadow: var(--glow-medium);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+        
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 13, 26, 0.9);
+            color: var(--text-color);
+            z-index: 10;
+            border-radius: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #game-over-screen.active {
+            display: flex;
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #game-over-box {
+            animation: fadeIn 0.5s ease-in-out 0.3s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            padding: 10px;
+        }
+
+        #game-over-box h2 {
+            font-size: clamp(2rem, 6vw, 2.5rem);
+            color: #ff4757;
+            text-shadow: 0 0 10px #ff4757;
+            margin-bottom: 20px;
+        }
+        
+        #game-over-box p {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            margin: 10px 5px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border-radius: 5px;
+            box-shadow: var(--glow-strong);
+        }
+        
+        .btn:hover {
+            background: var(--primary-color);
+            color: var(--bg-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="main-menu" class="screen active">
+            <h1>NEON SNAKE</h1>
+            <ul id="mode-list">
+                <li data-mode="classic">Classic <span>Eat food, grow long, avoid walls.</span></li>
+                <li data-mode="zen">Zen Mode <span>No walls. Wrap around the screen.</span></li>
+                <li data-mode="speed">Speed Demon <span>Gets faster with every meal.</span></li>
+                <li data-mode="obstacles">Obstacle Course <span>Static obstacles block your path.</span></li>
+                <li data-mode="portals">Portal Jumper <span>Enter one portal, exit the other.</span></li>
+                <li data-mode="labyrinth">The Labyrinth <span>The whole board is a maze.</span></li>
+                <li data-mode="frenzy">Food Frenzy <span>Multiple food items at once.</span></li>
+                <li data-mode="inverse">Inverse Controls <span>Up is down, left is right. Oof.</span></li>
+                <li data-mode="flashlight">Flashlight <span>Only a small area is visible.</span></li>
+                <li data-mode="suddenDeath">Sudden Death <span>An obstacle appears after 5 food.</span></li>
+            </ul>
+            <div class="creator-credit">
+                <span>Created by: 
+                    <a href="https://github.com/akshdeepsingh7" target="_blank" rel="noopener noreferrer">Akshdeep Singh</a>
+                </span>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div id="stats-bar">
+                <div id="score">SCORE: 0</div>
+                <div id="mode-display">MODE: CLASSIC</div>
+                <div id="high-score">HI: 0</div>
+            </div>
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+        </div>
+
+        <div id="game-over-screen" class="screen">
+            <div id="game-over-box">
+                <h2>GAME OVER</h2>
+                <p id="final-score">YOUR SCORE: 0</p>
+                <p id="final-high-score">HIGH SCORE: 0</p>
+                <div>
+                    <button id="restart-btn" class="btn">Play Again</button>
+                    <button id="menu-btn" class="btn">Main Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainMenu = document.getElementById('main-menu');
+            const gameScreen = document.getElementById('game-screen');
+            const gameOverScreen = document.getElementById('game-over-screen');
+            const modeList = document.getElementById('mode-list');
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const scoreDisplay = document.getElementById('score');
+            const highScoreDisplay = document.getElementById('high-score');
+            const modeDisplay = document.getElementById('mode-display');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const finalHighScoreDisplay = document.getElementById('final-high-score');
+            
+            const restartBtn = document.getElementById('restart-btn');
+            const menuBtn = document.getElementById('menu-btn');
+
+            const GRID_SIZE = 20;
+            const CANVAS_RESOLUTION = canvas.width;
+            const TILE_COUNT = CANVAS_RESOLUTION / GRID_SIZE;
+
+            let snake, food, direction, score, gameSpeed, isGameOver, gameLoopTimeout, currentMode;
+            let obstacles = [];
+            let portals = [];
+            let foodItems = [];
+            let changingDirection = false;
+
+            const MODE_DETAILS = {
+                classic: { name: 'Classic' },
+                zen: { name: 'Zen Mode' },
+                speed: { name: 'Speed Demon' },
+                obstacles: { name: 'Obstacle Course' },
+                portals: { name: 'Portal Jumper' },
+                labyrinth: { name: 'The Labyrinth' },
+                frenzy: { name: 'Food Frenzy' },
+                inverse: { name: 'Inverse Controls' },
+                flashlight: { name: 'Flashlight' },
+                suddenDeath: { name: 'Sudden Death' }
+            };
+
+            function showScreen(screen) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                screen.classList.add('active');
+            }
+
+            modeList.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if (li) {
+                    const mode = li.getAttribute('data-mode');
+                    startGame(mode);
+                }
+            });
+
+            restartBtn.addEventListener('click', () => startGame(currentMode));
+            menuBtn.addEventListener('click', () => showScreen(mainMenu));
+
+            function startGame(mode) {
+                currentMode = mode;
+                isGameOver = false;
+
+                snake = [{ x: 10, y: 10 }];
+                direction = { x: 0, y: 0 };
+                changingDirection = false; 
+                score = 0;
+                gameSpeed = 120;
+                obstacles = [];
+                portals = [];
+                foodItems = [];
+
+                setupMode();
+                
+                updateScoreDisplay();
+                showScreen(gameScreen);
+                gameOverScreen.classList.remove('active');
+
+                if (gameLoopTimeout) clearTimeout(gameLoopTimeout);
+                
+                gameLoop();
+            }
+
+            function setupMode() {
+                modeDisplay.textContent = `MODE: ${MODE_DETAILS[currentMode].name}`;
+                
+                switch(currentMode) {
+                    case 'obstacles':
+                        for (let i = 0; i < 10; i++) obstacles.push(generateRandomPosition());
+                        break;
+                    case 'portals':
+                        portals.push({ x: 3, y: 15 });
+                        portals.push({ x: 26, y: 15 });
+                        break;
+                    case 'labyrinth':
+                        for (let i = 0; i < TILE_COUNT; i++) {
+                            if (i % 8 !== 4 && i % 8 !== 5) obstacles.push({x: i, y: 7});
+                            if (i % 8 !== 0 && i % 8 !== 1) obstacles.push({x: i, y: 14});
+                            if (i % 8 !== 2 && i % 8 !== 3) obstacles.push({x: i, y: 21});
+                        }
+                        break;
+                    case 'frenzy':
+                        for (let i = 0; i < 5; i++) foodItems.push(generateRandomPosition());
+                        break;
+                    case 'suddenDeath':
+                        break;
+                }
+                
+                if (currentMode !== 'frenzy') {
+                    food = generateFoodPosition();
+                }
+            }
+            
+            document.addEventListener('keydown', handleKeyPress);
+
+            function handleKeyPress(e) {
+                if (changingDirection) return;
+                
+                const keyMap = { ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 } };
+                const inverseKeyMap = { ArrowUp: { x: 0, y: 1 }, ArrowDown: { x: 0, y: -1 }, ArrowLeft: { x: 1, y: 0 }, ArrowRight: { x: -1, y: 0 } };
+
+                const selectedKeyMap = currentMode === 'inverse' ? inverseKeyMap : keyMap;
+                const newDir = selectedKeyMap[e.key];
+
+                if (newDir) {
+                    e.preventDefault();
+                    const isReversing = (snake.length > 1) && (newDir.x === -direction.x && newDir.y === -direction.y);
+                    if (!isReversing) {
+                        direction = newDir;
+                        changingDirection = true;
+                    }
+                }
+            }
+
+            function gameLoop() {
+                if (isGameOver) return;
+                
+                update();
+                draw();
+                
+                gameLoopTimeout = setTimeout(gameLoop, gameSpeed);
+            }
+
+            function update() {
+                if (direction.x === 0 && direction.y === 0) return;
+
+                const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+                if (currentMode === 'portals') {
+                    if (head.x === portals[0].x && head.y === portals[0].y) {
+                        head.x = portals[1].x; head.y = portals[1].y;
+                    } else if (head.x === portals[1].x && head.y === portals[1].y) {
+                        head.x = portals[0].x; head.y = portals[0].y;
+                    }
+                }
+                
+                snake.unshift(head);
+                
+                let ateFood = false;
+                if (currentMode === 'frenzy') {
+                    const foodIndex = foodItems.findIndex(f => f.x === head.x && f.y === head.y);
+                    if (foodIndex > -1) {
+                        foodItems.splice(foodIndex, 1);
+                        foodItems.push(generateRandomPosition());
+                        ateFood = true;
+                    }
+                } else {
+                    if (food && head.x === food.x && head.y === food.y) {
+                       ateFood = true;
+                       food = generateFoodPosition();
+                    }
+                }
+
+                if (ateFood) {
+                    score++;
+                    if (currentMode === 'speed' && gameSpeed > 40) gameSpeed -= 5;
+                    if (currentMode === 'suddenDeath' && score === 5) {
+                        for(let i = 10; i < 20; i++) obstacles.push({x: i, y: 15});
+                    }
+                    updateScoreDisplay();
+                } else {
+                    snake.pop();
+                }
+
+                checkCollisions(head);
+                changingDirection = false;
+            }
+
+            function checkCollisions(head) {
+                if (currentMode === 'zen') {
+                    if (head.x < 0) head.x = TILE_COUNT - 1;
+                    if (head.x >= TILE_COUNT) head.x = 0;
+                    if (head.y < 0) head.y = TILE_COUNT - 1;
+                    if (head.y >= TILE_COUNT) head.y = 0;
+                } else {
+                    if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
+                        return triggerGameOver();
+                    }
+                }
+
+                for (let i = 1; i < snake.length; i++) {
+                    if (head.x === snake[i].x && head.y === snake[i].y) {
+                        return triggerGameOver();
+                    }
+                }
+
+                for (const obs of obstacles) {
+                    if (head.x === obs.x && head.y === obs.y) {
+                        return triggerGameOver();
+                    }
+                }
+            }
+
+            function triggerGameOver() {
+                isGameOver = true;
+                clearTimeout(gameLoopTimeout);
+                
+                const highScore = getHighScore();
+                if (score > highScore) {
+                    setHighScore(score);
+                    finalHighScoreDisplay.textContent = `NEW HIGH SCORE: ${score}`;
+                } else {
+                    finalHighScoreDisplay.textContent = `HIGH SCORE: ${highScore}`;
+                }
+                finalScoreDisplay.textContent = `YOUR SCORE: ${score}`;
+                
+                gameOverScreen.classList.add('active');
+            }
+
+            function draw() {
+                ctx.save();
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, CANVAS_RESOLUTION, CANVAS_RESOLUTION);
+
+                if (currentMode === 'flashlight') {
+                    drawGameElements();
+                    const headPos = { x: snake[0].x * GRID_SIZE + GRID_SIZE / 2, y: snake[0].y * GRID_SIZE + GRID_SIZE / 2 };
+                    const gradient = ctx.createRadialGradient(headPos.x, headPos.y, 50, headPos.x, headPos.y, 150);
+                    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                    gradient.addColorStop(0.8, 'rgba(0,0,0,0.95)');
+                    gradient.addColorStop(1, 'rgba(0,0,0,1)');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, CANVAS_RESOLUTION, CANVAS_RESOLUTION);
+                } else {
+                    drawGameElements();
+                }
+                ctx.restore();
+            }
+            
+            function drawGameElements() {
+                ctx.fillStyle = '#8e44ad';
+                ctx.shadowColor = '#8e44ad';
+                ctx.shadowBlur = 10;
+                obstacles.forEach(obs => drawRect(obs.x, obs.y));
+
+                ctx.fillStyle = '#3498db';
+                ctx.shadowColor = '#3498db';
+                ctx.shadowBlur = 15;
+                portals.forEach(p => drawRect(p.x, p.y));
+
+                if(food || foodItems.length > 0) {
+                    ctx.fillStyle = 'var(--food-color)';
+                    ctx.shadowColor = 'var(--food-color)';
+                    ctx.shadowBlur = 15;
+                    if (currentMode === 'frenzy') {
+                        foodItems.forEach(f => drawRect(f.x, f.y));
+                    } else if (food) {
+                        drawRect(food.x, food.y);
+                    }
+                }
+
+                snake.forEach((segment, index) => {
+                    ctx.fillStyle = index === 0 ? 'var(--primary-color)' : 'var(--secondary-color)';
+                    ctx.shadowColor = index === 0 ? 'var(--primary-color)' : 'var(--secondary-color)';
+                    ctx.shadowBlur = 10;
+                    drawRect(segment.x, segment.y);
+                });
+            }
+
+            function drawRect(gridX, gridY) {
+                ctx.fillRect(gridX * GRID_SIZE + 1, gridY * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+            }
+
+            function generateRandomPosition() {
+                let position;
+                do {
+                    position = {
+                        x: Math.floor(Math.random() * TILE_COUNT),
+                        y: Math.floor(Math.random() * TILE_COUNT)
+                    };
+                } while (isPositionOccupied(position));
+                return position;
+            }
+            
+            function generateFoodPosition() {
+                return generateRandomPosition();
+            }
+
+            function isPositionOccupied(pos) {
+                if (!pos) return false;
+                return snake.some(seg => seg.x === pos.x && seg.y === pos.y) ||
+                       obstacles.some(obs => obs.x === pos.x && obs.y === pos.y) ||
+                       portals.some(p => p.x === pos.x && p.y === pos.y);
+            }
+
+            function updateScoreDisplay() {
+                scoreDisplay.textContent = `SCORE: ${score}`;
+                highScoreDisplay.textContent = `HI: ${getHighScore()}`;
+            }
+
+            function getHighScore() {
+                return parseInt(localStorage.getItem(`snake_highScore_${currentMode}`) || '0');
+            }
+
+            function setHighScore(newScore) {
+                localStorage.setItem(`snake_highScore_${currentMode}`, newScore.toString());
+            }
+
+            showScreen(mainMenu);
+        });
+    </script>
+
+</body>
+</html>
