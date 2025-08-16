@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,6 +41,7 @@
             min-height: 100vh;
             padding: 10px;
             text-align: center;
+            overflow: hidden;
         }
 
         #game-container {
@@ -239,6 +241,56 @@
             color: var(--bg-color);
         }
 
+        #mobile-controls {
+            display: none;
+            width: clamp(150px, 40vw, 200px);
+            margin: 15px auto 0;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 5px;
+            user-select: none;
+        }
+
+        @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+            #mobile-controls {
+                display: grid;
+            }
+        }
+
+        .control-btn {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background: transparent;
+            border: 2px solid var(--secondary-color);
+            color: var(--secondary-color);
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(1rem, 5vw, 1.5rem);
+            line-height: 1;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: var(--glow-medium);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            aspect-ratio: 1 / 1;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.1s ease-in-out;
+        }
+
+        .control-btn:active {
+            background-color: var(--secondary-color);
+            color: var(--bg-color);
+            transform: scale(0.95);
+            box-shadow: 0 0 8px var(--secondary-color), 0 0 15px var(--secondary-color);
+        }
+
+        .control-btn[data-dir="up"] { grid-column: 2; grid-row: 1; }
+        .control-btn[data-dir="left"] { grid-column: 1; grid-row: 2; }
+        .control-btn[data-dir="right"] { grid-column: 3; grid-row: 2; }
+        .control-btn[data-dir="down"] { grid-column: 2; grid-row: 3; }
+
     </style>
 </head>
 <body>
@@ -272,6 +324,17 @@
                 <div id="high-score">HI: 0</div>
             </div>
             <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <div id="mobile-controls">
+                <div></div>
+                <button class="control-btn" data-dir="up">▲</button>
+                <div></div>
+                <button class="control-btn" data-dir="left">◀</button>
+                <div></div>
+                <button class="control-btn" data-dir="right">▶</button>
+                <div></div>
+                <button class="control-btn" data-dir="down">▼</button>
+                <div></div>
+            </div>
         </div>
 
         <div id="game-over-screen" class="screen">
@@ -295,6 +358,7 @@
             const modeList = document.getElementById('mode-list');
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
+            const mobileControls = document.getElementById('mobile-controls');
             
             const scoreDisplay = document.getElementById('score');
             const highScoreDisplay = document.getElementById('high-score');
@@ -314,6 +378,7 @@
             let portals = [];
             let foodItems = [];
             let changingDirection = false;
+            let touchStartX = 0, touchStartY = 0;
 
             const MODE_DETAILS = {
                 classic: { name: 'Classic' },
@@ -398,11 +463,19 @@
                 }
             }
             
-            document.addEventListener('keydown', handleKeyPress);
+            function changeDirection(newDir) {
+                if (changingDirection || !newDir) return;
 
-            function handleKeyPress(e) {
-                if (changingDirection) return;
+                const isStationary = direction.x === 0 && direction.y === 0;
+                const isReversing = !isStationary && (snake.length > 1) && (newDir.x === -direction.x && newDir.y === -direction.y);
                 
+                if (!isReversing) {
+                    direction = newDir;
+                    changingDirection = true;
+                }
+            }
+            
+            function handleKeyPress(e) {
                 const keyMap = { ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 } };
                 const inverseKeyMap = { ArrowUp: { x: 0, y: 1 }, ArrowDown: { x: 0, y: -1 }, ArrowLeft: { x: 1, y: 0 }, ArrowRight: { x: -1, y: 0 } };
 
@@ -411,13 +484,57 @@
 
                 if (newDir) {
                     e.preventDefault();
-                    const isReversing = (snake.length > 1) && (newDir.x === -direction.x && newDir.y === -direction.y);
-                    if (!isReversing) {
-                        direction = newDir;
-                        changingDirection = true;
-                    }
+                    changeDirection(newDir);
                 }
             }
+            
+            function handleMobileControls(e) {
+                e.preventDefault();
+                const btn = e.target.closest('.control-btn');
+                if (!btn) return;
+
+                const dir = btn.dataset.dir;
+                const keyMap = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+                const inverseKeyMap = { up: { x: 0, y: 1 }, down: { x: 0, y: -1 }, left: { x: 1, y: 0 }, right: { x: -1, y: 0 } };
+                const selectedKeyMap = currentMode === 'inverse' ? inverseKeyMap : keyMap;
+                
+                changeDirection(selectedKeyMap[dir]);
+            }
+
+            function handleTouchStart(e) {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }
+
+            function handleTouchEnd(e) {
+                const touchEndX = e.changedTouches[0].screenX;
+                const touchEndY = e.changedTouches[0].screenY;
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                if (Math.max(absDx, absDy) < 30) return;
+
+                let newDirKey;
+                if (absDx > absDy) {
+                    newDirKey = dx > 0 ? 'right' : 'left';
+                } else {
+                    newDirKey = dy > 0 ? 'down' : 'up';
+                }
+
+                const keyMap = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+                const inverseKeyMap = { up: { x: 0, y: 1 }, down: { x: 0, y: -1 }, left: { x: 1, y: 0 }, right: { x: -1, y: 0 } };
+                const selectedKeyMap = currentMode === 'inverse' ? inverseKeyMap : keyMap;
+                
+                changeDirection(selectedKeyMap[newDirKey]);
+            }
+
+            document.addEventListener('keydown', handleKeyPress);
+            mobileControls.addEventListener('touchstart', handleMobileControls, { passive: false });
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+
 
             function gameLoop() {
                 if (isGameOver) return;
